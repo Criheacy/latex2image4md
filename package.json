@@ -1,5 +1,5 @@
 {
-  "name": "mdlatex2image",
+  "name": "latex2image4md",
   "description": "Convert LaTeX formula in markdown text into rendered image.",
   "private": true,
   "version": "0.0.0",
