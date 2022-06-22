@@ -2,6 +2,8 @@
 
 A serverless web application to convert LaTeX formula in markdown content into rendered image.
 
+## [Project Site](https://latex2image4md.criheacy.com/)
+
 ## Motivation
 
 Some markdown editors and platforms don't support LaTeX formula rendering, they just display it in plain text. For example, here is a LaTeX equation surrounded by a pair of `$` signs:
