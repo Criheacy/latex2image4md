@@ -282,7 +282,7 @@ const StepItem = (props: StepItemProps) => {
 };
 
 const Container = styled.div`
-  margin: 4rem auto;
+  margin: 0 auto;
   padding: 1rem 0.4rem;
   width: 54rem;
   height: 32rem;
