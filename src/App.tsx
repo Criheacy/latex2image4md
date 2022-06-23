@@ -1,9 +1,22 @@
-import React, { ReactNode, useRef, useState } from "react";
+import React, {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import styled from "@emotion/styled";
 import { Transition } from "react-transition-group";
 import { MdClose } from "react-icons/md";
-import { convert } from "./converter/converter";
+import { convert, ConverterConfig } from "./utils/converter";
+import Checkbox from "./components/checkbox";
+import BlockFormula from "./block-formula-example.svg";
+import InlineFormula from "./inline-formula-example.svg";
+import { useImmer } from "use-immer";
+import { TitleBlock } from "./components/block";
+import Slider from "./components/slider";
+import { tex2svg, defaultScale } from "./utils/tex2svg";
 
 const App = () => {
   const [selectedStep, setSelectedStep] = useState(1);
@@ -11,6 +24,12 @@ const App = () => {
   const [file, setFile] = useState<File | null>();
   const [fileContent, setFileContent] = useState<string | null>();
   const [loadingFileContent, setLoadingFileContent] = useState<boolean>();
+
+  // converter configs
+  const [config, setConfig] = useImmer<ConverterConfig>({
+    displayMode: "auto",
+    scale: defaultScale,
+  });
 
   /* upload file button */
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -21,9 +40,14 @@ const App = () => {
     const targetFile = event.target.files[0] as File;
     setFile(targetFile);
     setLoadingFileContent(true);
+
+    // load file content
     targetFile.text().then((content) => {
       setLoadingFileContent(false);
       setFileContent(content);
+
+      // turn to next step
+      setSelectedStep(2);
     });
   };
 
@@ -35,10 +59,37 @@ const App = () => {
     setFileContent(null);
   };
 
+  /* change scaling config*/
+  const scalePreviewRef = useRef<HTMLDivElement>(null);
+  const onScaleChanged = useCallback(
+    (value: number) => {
+      const svg = tex2svg(
+        `${value}\\mathrm\{px\}=1\\mathrm\{em\}` +
+          (value === defaultScale ? "\\space \\mathrm{(default)}" : ""),
+        {
+          scale: value,
+        }
+      );
+
+      if (scalePreviewRef.current) {
+        scalePreviewRef.current.innerHTML = "";
+        scalePreviewRef.current.appendChild(svg);
+        setConfig((config) => {
+          config.scale = value;
+        });
+      }
+    },
+    [setConfig, scalePreviewRef]
+  );
+  // initialize
+  useEffect(() => {
+    onScaleChanged(defaultScale);
+  }, []);
+
   /* do conversion button */
   const onConvert = () => {
     if (file) {
-      convert(file).then(() => {
+      convert(file, config).then(() => {
         // TODO: should make a toast here
         console.log("Complete!");
       });
@@ -66,14 +117,14 @@ const App = () => {
             onChange={onFileUploaded}
           />
           {loadingFileContent ? (
-            <SoftTextContainer>
+            <Flexbox>
               <SoftText>Loading...</SoftText>
-            </SoftTextContainer>
+            </Flexbox>
           ) : fileContent ? (
-            <SoftTextContainer>
+            <Flexbox>
               <MdClose size={20} color={"#808080"} onClick={onFileRemoved} />
               <SoftText>{file?.name}</SoftText>
-            </SoftTextContainer>
+            </Flexbox>
           ) : (
             <SoftButton onClick={onUpload}>Select File</SoftButton>
           )}
@@ -88,9 +139,75 @@ const App = () => {
           }}
           disabled={!fileContent}
         >
-          <SoftTextContainer>
-            <SoftText>Under Development ...</SoftText>
-          </SoftTextContainer>
+          <TitleBlock title={"Rendering Mode"}>
+            <Flexbox direction={"column"} alignment={"start"}>
+              <Checkbox
+                checked={config.displayMode === "auto"}
+                onClick={() =>
+                  setConfig((config) => {
+                    config.displayMode = "auto";
+                  })
+                }
+              >
+                <SoftText alignment={"start"} size={"1em"}>
+                  auto (by formula type)
+                </SoftText>
+              </Checkbox>
+              <Flexbox direction={"row"} gap={"2rem"}>
+                <Checkbox
+                  checked={config.displayMode === "inline"}
+                  onClick={() =>
+                    setConfig((config) => {
+                      config.displayMode = "inline";
+                    })
+                  }
+                >
+                  <Image
+                    width={"52px"}
+                    src={InlineFormula}
+                    alt={"inline-formula"}
+                  />
+                </Checkbox>
+                <Checkbox
+                  checked={config.displayMode === "block"}
+                  onClick={() =>
+                    setConfig((config) => {
+                      config.displayMode = "block";
+                    })
+                  }
+                >
+                  <Image
+                    width={"24px"}
+                    src={BlockFormula}
+                    alt={"block-formula"}
+                  />
+                </Checkbox>
+              </Flexbox>
+            </Flexbox>
+          </TitleBlock>
+          <TitleBlock title={"Image Scaling"}>
+            <Slider
+              min={4}
+              max={32}
+              value={config.scale || defaultScale}
+              onChange={onScaleChanged}
+            />
+            <ScalePreviewContainer ref={scalePreviewRef} />
+          </TitleBlock>
+          <TitleBlock title={"Output Format"}>
+            <Flexbox direction={"column"} alignment={"start"} gap={"0.6rem"}>
+              <Checkbox checked={true}>
+                <SoftText alignment={"start"} size={"1em"}>
+                  SVG (vector graphics)
+                </SoftText>
+              </Checkbox>
+              <Checkbox checked={false} disabled={true}>
+                <SoftText alignment={"start"} size={"1em"}>
+                  PNG (raster graphics)
+                </SoftText>
+              </Checkbox>
+            </Flexbox>
+          </TitleBlock>
         </StepItem>
 
         <StepItem
@@ -166,8 +283,11 @@ const StepItem = (props: StepItemProps) => {
 
 const Container = styled.div`
   margin: 4rem auto;
+  padding: 1rem 0.4rem;
   width: 54rem;
   height: 32rem;
+
+  background-color: #fefefe;
 
   display: flex;
   flex-direction: row;
@@ -231,18 +351,25 @@ const StepItemId = styled.div`
 `;
 
 const StepBodyContainer = styled.div`
+  padding: 0 1.4rem;
+
   transition: height 200ms ease-in-out;
   overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 `;
 
-const SoftTextContainer = styled.div<{
+const Flexbox = styled.div<{
+  alignment?: "center" | "start" | "end" | "stretch";
   direction?: "row" | "column";
   gap?: string;
 }>`
   display: flex;
   flex-direction: ${(props) => props.direction || "row"};
   justify-content: center;
-  align-items: center;
+  align-items: ${(props) => props.alignment || "center"};
   gap: ${(props) => props.gap || "0.5rem"};
 `;
 
@@ -276,12 +403,27 @@ const SoftButton = styled.div`
   }
 `;
 
-const SoftText = styled.div<{ color?: string }>`
-  text-align: center;
+const SoftText = styled.div<{
+  size?: string;
+  color?: string;
+  alignment?: "center" | "start" | "end" | "stretch";
+}>`
+  text-align: ${(props) => props.alignment || "center"};
 
   color: ${(props) => props.color || "#808080"};
   font-family: Roboto, sans-serif;
-  font-size: 1.175em;
+  font-size: ${(props) => props.size || "1.175em"};
+
+  transition: color 100ms;
 `;
+
+const ScalePreviewContainer = styled.div`
+  margin-top: 1rem;
+  width: 14rem;
+  height: 3rem;
+  overflow: hidden;
+`;
+
+const Image = styled.img``;
 
 export default App;

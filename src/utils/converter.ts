@@ -1,11 +1,11 @@
 import JSZip from "jszip";
-import { tex2svg } from "../utils/tex2svg";
+import { tex2svg } from "./tex2svg";
 import { saveAs } from "file-saver";
 
 const defaultOption = {
   em: 16,
   ex: 8,
-  containerWidth: 579,
+  containerWidth: 640,
   display: true,
   scale: 1,
   lineWidth: 1000000,
@@ -22,7 +22,12 @@ const templates = [
   },
 ];
 
-const convert = async (file: File) => {
+type ConverterConfig = {
+  displayMode?: "auto" | "inline" | "block";
+  scale?: number;
+};
+
+const convert = async (file: File, config?: ConverterConfig) => {
   const fileName = file.name.match(/.+(?=\..+)/g)![0];
   let fileContent = await file.text();
 
@@ -37,6 +42,16 @@ const convert = async (file: File) => {
       const svgElement = tex2svg(tex, {
         ...defaultOption,
         ...option,
+
+        // display mode
+        ...(config?.displayMode === "inline"
+          ? { display: false }
+          : config?.displayMode === "block"
+          ? { display: true }
+          : {}),
+
+        // scale
+        ...(config?.scale ? { scale: config.scale } : {}),
       });
 
       // append image in zip folder
@@ -56,4 +71,5 @@ const convert = async (file: File) => {
   });
 };
 
+export type { ConverterConfig };
 export { convert };
