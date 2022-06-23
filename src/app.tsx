@@ -5,7 +5,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import ReactMarkdown from "react-markdown";
 import styled from "@emotion/styled";
 import { Transition } from "react-transition-group";
 import { MdClose } from "react-icons/md";
@@ -17,6 +16,7 @@ import { useImmer } from "use-immer";
 import { TitleBlock } from "./components/block";
 import Slider from "./components/slider";
 import { tex2svg, defaultScale } from "./utils/tex2svg";
+import Markdown from "./components/markdown";
 
 const App = () => {
   const [selectedStep, setSelectedStep] = useState(1);
@@ -223,7 +223,7 @@ const App = () => {
         </StepItem>
       </StepBoardContainer>
       <PreviewContainer>
-        <ReactMarkdown>{fileContent || ""}</ReactMarkdown>
+        <Markdown>{fileContent || ""}</Markdown>
       </PreviewContainer>
     </Container>
   );
