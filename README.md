@@ -19,3 +19,7 @@ As you can see, it is pretty hard to read, especially for those who are not fami
 ![example-1](./README-asset/example-1.svg)
 
 It would become a lot easier to be recognized. So if you just want to make it more convenient for readers, you might as well convert these formulas into pictures.
+
+## Reference
+
+Special thanks to [LaTeX to SVG](https://viereck.ch/latex-to-svg/) by Thomas Lochmatter
